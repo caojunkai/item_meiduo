@@ -1,0 +1,8 @@
+Index: item_mall/item_mall/settings/__init__.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- item_mall/item_mall/settings/__init__.py	(revision )
++++ item_mall/item_mall/settings/__init__.py	(revision )
+@@ -0,0 +1,0 @@
