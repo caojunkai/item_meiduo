@@ -7,12 +7,13 @@ def send_sms(self, to, datas, tempid):
 
     try:
 
-        # ccp = CCP()
+        ccp = CCP()
 
-        # ret = ccp.send_template_sms(to, datas, 1)
+        ret = ccp.send_template_sms(to, datas, tempid)
 
-        print(datas[0])
+        print(datas[0],'验证码为')
 
     except Exception as e:
 
         self.retry(exc=e, max_retries=3)
+    return ret

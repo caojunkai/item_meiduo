@@ -11,10 +11,12 @@ from item_mall.utils.response_code import RETCODE
 
 from django import http
 
+from users.models import User
 from . import constants
 from item_mall.libs.yuntongxun.sms import CCP
 from . import constants
 from celery_tasks.sms.tasks import send_sms
+# from item_mall.apps.users.models import User
 
 
 # Create your views here.
@@ -44,6 +46,12 @@ class SmsCodeView(View):
         # 用过一次就删
         redis_cli.delete(uuid)
        # 验证用户输入值是否正确    decode()把数据库中的数据（二进制）转化   upper:小写字符转化成大写的函数
+        count = User.objects.filter(mobile=mobile).count()
+        if count>0:
+            return http.JsonResponse({
+                'code': RETCODE.PARAMERR,
+                'errmsg': '手机号已注册'
+            })
         if image_code_redis.decode()!= image_code_request.upper():
             return http.JsonResponse({
                 'code':RETCODE.PARAMERR,

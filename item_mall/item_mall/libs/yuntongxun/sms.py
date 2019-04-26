@@ -3,16 +3,16 @@
 from .CCPRestSDK import REST
 
 # 说明：主账号，登陆云通讯网站后，可在"控制台-应用"中看到开发者主账号ACCOUNT SID
-_accountSid = '8aaf0708568d4143015697b0f4960888'
+_accountSid = '8a216da86a58af8b016a5987f8a401cd'
 
 # 说明：主账号Token，登陆云通讯网站后，可在控制台-应用中看到开发者主账号AUTH TOKEN
-_accountToken = '57c6c3ef3cef47e680519a734f6812f8'
+_accountToken = 'ecafde525e034357813a6f225b8f73c2'
 
 # 请使用管理控制台首页的APPID或自己创建应用的APPID
-_appId = '8aaf0708568d4143015697b0f56e088f'
+_appId = '8a216da86a58af8b016a5987f8fc01d4'
 
 # 说明：请求地址，生产环境配置成app.cloopen.com
-_serverIP = 'sandboxapp.cloopen.com'
+_serverIP = 'app.cloopen.com'
 
 # 说明：请求端口 ，生产环境为8883
 _serverPort = "8883"
@@ -39,6 +39,7 @@ class CCP(object):
         # @param datas 内容数据 格式为数组 例如：{'12','34'}，如不需替换请填 ''
         # @param temp_id 模板Id
         result = self.rest.sendTemplateSMS(to, datas, temp_id)
+        print(result.get('statusCode'),'>'*100)
         # 如果云通讯发送短信成功，返回的字典数据result中statuCode字段的值为"000000"
         if result.get("statusCode") == "000000":
             # 返回0 表示发送短信成功
