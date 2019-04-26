@@ -11,6 +11,8 @@ import re
 from .models import User
 
 from item_mall.utils.response_code import RETCODE
+from django.urls import reverse
+from django.contrib.auth import authenticate
 
 
 
@@ -72,10 +74,18 @@ class RegisterView(View):
 
         # 保持状态
         login(request,user)
-
-
+        url = reverse('users:index')
         # 响应注册结果
-        return redirect('/')
+        return redirect(url)
+
+class IndexView(View):
+    """首页广告"""
+
+    def get(self, request):
+        """提供首页广告界面"""
+        return render(request, 'index.html')
+
+
 
 class UsernameCountView(View):
     def get(self,request,username):
@@ -96,5 +106,35 @@ class MobileCountView(View):
             'errmsg':'OK',
             'count':count
         })
+class LoginView(View):
+    def get(self,request):
+        return render(request,'login.html')
+    def post(self,request):
+        username = request.POST.get('username')
+        password = request.POST.get('pwd')
+        remembered = request.POST.get('remembered')
+        if not all([username,password]):
+            return http.HttpResponseForbidden('缺少必要参数')
+        if not re.match(r'^[a-zA-Z0-9_-]{5,20}$', username):
+            return  http.HttpResponseForbidden('请输入正确用户名或手机号')
+        if not re.match(r'^[0-9A-Za-z]{8,20}$', password):
+            return http.HttpResponseForbidden('密码最少8位，最长20位')
+        user = authenticate(username = username,password = password)
+        if user is None:
+            return render(request,'login.html',{'err_msg':'账户不对'})
 
 
+        login(request, user)
+        # 设置状态保持的周期
+        if remembered != 'on':
+            # 没有记住用户：浏览器会话结束就过期
+            request.session.set_expiry(0)
+        else:
+            # 记住用户：None表示两周后过期
+            request.session.set_expiry(None)
+
+        # 响应登录结果
+        url = reverse('users:index')
+        print(url)
+        # 响应注册结果
+        return redirect(url)
