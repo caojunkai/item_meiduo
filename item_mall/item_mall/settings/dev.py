@@ -23,12 +23,12 @@ sys.path.insert(0,os.path.join(BASE_DIR,'apps'))
 # See https://docs.djangoproject.com/en/1.11/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '^8as9czbyu+jawargf#tov8r!dqbff_-t$kr)g4lrh7h1ii@%='
+SECRET_KEY = '^8as9czbyu+jaargf#tov8r!dqbff_-t$kr)g4lrh7h1ii@%='
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'users.apps.UsersConfig', # 用户应用模块
     'verifications.apps.VerificationsConfig',
+    'oauth.apps.OauthConfig',
 ]
 
 MIDDLEWARE = [
@@ -224,3 +225,15 @@ LOGGING = {
 
 # 指定本项目用户模型类
 AUTH_USER_MODEL = 'users.User'
+AUTHENTICATION_BACKENDS = ['item_mall.utils.auth_backends.ItemModelBackend']
+
+
+# 指定登陆页面
+LOGIN_URL = '/login/'
+
+# QQ授权信息
+QQ_CLIENT_ID = '101518219'
+
+QQ_CLIENT_SECRET = '418d84ebdc7241efb79536886ae95224'
+
+QQ_REDIRECT_URI = 'http://www.meiduo.site:8000/oauth_callback'

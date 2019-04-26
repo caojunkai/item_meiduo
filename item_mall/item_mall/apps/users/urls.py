@@ -10,4 +10,9 @@ urlpatterns = [
 
 url(r'^login/$', views.LoginView.as_view(), name='login'),
 url(r'^$', views.IndexView.as_view(), name='index'),
-    ]
+    url('^logout/$', views.LogoutView.as_view()),
+
+    url('^info/$', views.InfoView.as_view()),
+url('^$', views.InfoView.as_view()),
+
+]

@@ -4,7 +4,7 @@ from django.views import View
 
 from django import http
 
-from django.contrib.auth import login
+from django.contrib.auth import login,logout
 
 import re
 
@@ -13,7 +13,7 @@ from .models import User
 from item_mall.utils.response_code import RETCODE
 from django.urls import reverse
 from django.contrib.auth import authenticate
-
+from django.contrib.auth.mixins import LoginRequiredMixin
 
 
 # Create your views here.
@@ -76,7 +76,9 @@ class RegisterView(View):
         login(request,user)
         url = reverse('users:index')
         # 响应注册结果
-        return redirect(url)
+        response =  redirect(url)
+        response.set_cookie('username',user.username,max_age=60 * 60 * 24 * 14)
+        return response
 
 class IndexView(View):
     """首页广告"""
@@ -113,6 +115,7 @@ class LoginView(View):
         username = request.POST.get('username')
         password = request.POST.get('pwd')
         remembered = request.POST.get('remembered')
+        next_url = request.GET.get('next','/')
         if not all([username,password]):
             return http.HttpResponseForbidden('缺少必要参数')
         if not re.match(r'^[a-zA-Z0-9_-]{5,20}$', username):
@@ -122,19 +125,53 @@ class LoginView(View):
         user = authenticate(username = username,password = password)
         if user is None:
             return render(request,'login.html',{'err_msg':'账户不对'})
-
-
-        login(request, user)
-        # 设置状态保持的周期
-        if remembered != 'on':
-            # 没有记住用户：浏览器会话结束就过期
-            request.session.set_expiry(0)
         else:
-            # 记住用户：None表示两周后过期
-            request.session.set_expiry(None)
+            login(request, user)
+        # 设置状态保持的周期
+            if remembered != 'on':
+                # 没有记住用户：浏览器会话结束就过期
+                request.session.set_expiry(0)
+            else:
+                # 记住用户：None表示两周后过期
+                request.session.set_expiry(None)
 
         # 响应登录结果
-        url = reverse('users:index')
-        print(url)
-        # 响应注册结果
-        return redirect(url)
+        #     url = reverse('users:index')
+
+            response = redirect(next_url)
+            response.set_cookie('username', user.username, max_age=60 * 60 * 24 * 14)
+            # 响应注册结果
+            return response
+class LogoutView(View):
+    def get(self, request):
+
+        # 删session
+
+        logout(request)
+
+        # 删cookie中的username
+
+        response = redirect('/')
+
+        response.delete_cookie('username')
+
+        return response
+
+class InfoView(LoginRequiredMixin, View):
+
+    def get(self, request):
+
+        # 判断是否登录
+
+        # if request.user.is_authenticated:
+
+        #     # 已登录
+
+        #     return render(request, 'user_center_info.html')
+
+        # else:
+
+        #     # 未登录
+
+        #     return redirect('/login/')
+        return render(request, 'user_center_info.html')
