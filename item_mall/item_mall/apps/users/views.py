@@ -14,6 +14,11 @@ from item_mall.utils.response_code import RETCODE
 from django.urls import reverse
 from django.contrib.auth import authenticate
 from django.contrib.auth.mixins import LoginRequiredMixin
+import json
+from item_mall.utils import meiduo_signature
+from . import contants
+from django.conf import settings
+
 
 
 # Create your views here.
@@ -174,8 +179,29 @@ class InfoView(LoginRequiredMixin, View):
             'username': request.user.username,
             'mobile': request.user.mobile,
             'email': request.user.email,
-            'email_active': request.user.email_active
+            'email_active': request.user.email_active,
         }
         return render(request, 'user_center_info.html',context)
 
+class EmailView(LoginRequiredMixin,View):
 
+    def put(self,request):
+        "实现添加邮箱逻辑"
+        dict1 = json.loads(request.body.decode())
+        email = dict1.get('email')
+        if not all([email]):
+            return http.JsonResponse({
+                'code': RETCODE.PARAMERR,
+                'errmsg': '没有邮箱参数'
+            })
+        if not re.match('^[a-z0-9][\w\.\-]*@[a-z0-9\-]+(\.[a-z]{2,5}){1,2}$', email):
+            return http.JsonResponse({
+                'code': RETCODE.PARAMERR,
+                'errmsg': '邮箱格式错误'
+        })
+        user = request.user
+        user.email = email
+        user.save()
+        token = meiduo_signature.dumps({'user_id': user.id},contants.EMAIL_EXPIRES)
+        # verify_url = settings.EMAIL_VERIFY_URL + '?token=%s' % token
+        # send_user_email.delay(email, verify_url)
