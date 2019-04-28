@@ -21,3 +21,16 @@ app.autodiscover_tasks([
     'celery_tasks.sms',
 
 ])
+
+
+
+
+
+
+
+
+
+
+
+
+

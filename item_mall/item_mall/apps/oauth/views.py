@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render,redirect
 
 from django.views import View
 
@@ -9,6 +9,12 @@ from QQLoginTool.QQtool import OAuthQQ
 from django.conf import settings
 
 from item_mall.utils.response_code import RETCODE
+from .models import OAuthQQUser
+from item_mall.utils import meiduo_signature
+from . import contants
+from users.models import User
+from django.contrib.auth import login
+
 
 
 # Create your views here.
@@ -70,8 +76,47 @@ class QQopenidView(View):
 
             # 根据token获取openid
             openid = oauthqq_tool.get_open_id(token)
+
+            try:
+                # 查询
+                qquser = OAuthQQUser.objects.get(openid = openid)
+            except:
+                # 未绑定则定位到绑定页面
+                token = meiduo_signature.dumps({'openid':openid},contants.OPENID_EXPIRES)
+                context = {'token':token}
+                return render(request,'oauth_callback.html',context)
+            else:
+                login(request,qquser.user)
+                response = redirect(next_url)
+                response.set_cookie('username',qquser.user.username,max_age=60*60*24*14)
+                return response
+
         except:
             openid = '授权失败'
 
         return http.HttpResponse(openid)
+
+    def post(self,request):
+        mobile = request.POST.get('mobile')
+        pwd = request.POST.get('pwd')
+        sms_code_request = request.POST.get('sms_code')
+        access_token = request.POST.get('access_token')
+        next_url = request.GET.get('state')
+        json = meiduo_signature.loadds(access_token,contants.OPENID_EXPIRES)
+        if json is None:
+            return http.HttpResponseBadRequest('授权无效，请重试')
+        openid = json.get('openid')
+        try:
+            user = User.objects.get(mobile=mobile)
+        except:
+            user = User.objects.create_user(username = mobile,password = pwd,mobile = mobile)
+        else:
+            if not user.check_password(pwd):
+                return http.HttpResponseBadRequest('密码错误')
+        OAuthQQUser.objects.create(user = user,openid = openid)
+        login(request,user)
+        response = redirect(next_url)
+        response.set_cookie('username', user.username, max_age=60 * 60 * 24 * 14)
+        return response
+
 

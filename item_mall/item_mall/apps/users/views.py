@@ -87,8 +87,6 @@ class IndexView(View):
         """提供首页广告界面"""
         return render(request, 'index.html')
 
-
-
 class UsernameCountView(View):
     def get(self,request,username):
         # 处理 查询有多少条相同记录
@@ -108,6 +106,7 @@ class MobileCountView(View):
             'errmsg':'OK',
             'count':count
         })
+
 class LoginView(View):
     def get(self,request):
         return render(request,'login.html')
@@ -142,6 +141,7 @@ class LoginView(View):
             response.set_cookie('username', user.username, max_age=60 * 60 * 24 * 14)
             # 响应注册结果
             return response
+
 class LogoutView(View):
     def get(self, request):
 
@@ -162,16 +162,20 @@ class InfoView(LoginRequiredMixin, View):
     def get(self, request):
 
         # 判断是否登录
-
         # if request.user.is_authenticated:
-
         #     # 已登录
-
         #     return render(request, 'user_center_info.html')
-
         # else:
-
         #     # 未登录
-
         #     return redirect('/login/')
-        return render(request, 'user_center_info.html')
+
+        #提供个人信息
+        context = {
+            'username': request.user.username,
+            'mobile': request.user.mobile,
+            'email': request.user.email,
+            'email_active': request.user.email_active
+        }
+        return render(request, 'user_center_info.html',context)
+
+
