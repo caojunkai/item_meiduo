@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'users.apps.UsersConfig', # 用户应用模块
     'verifications.apps.VerificationsConfig',
     'oauth.apps.OauthConfig',
+'areas.apps.AreasConfig',
 ]
 
 MIDDLEWARE = [

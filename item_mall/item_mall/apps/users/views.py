@@ -18,6 +18,7 @@ import json
 from item_mall.utils import meiduo_signature
 from . import contants
 from django.conf import settings
+from celery_tasks.mail.tasks import send_user_email
 
 
 
@@ -199,9 +200,47 @@ class EmailView(LoginRequiredMixin,View):
                 'code': RETCODE.PARAMERR,
                 'errmsg': '邮箱格式错误'
         })
+        #修改属性
         user = request.user
         user.email = email
         user.save()
+
         token = meiduo_signature.dumps({'user_id': user.id},contants.EMAIL_EXPIRES)
-        # verify_url = settings.EMAIL_VERIFY_URL + '?token=%s' % token
-        # send_user_email.delay(email, verify_url)
+        verify_url = settings.EMAIL_VERIFY_URL + '?token=%s' % token
+        send_user_email.delay(email, verify_url)
+        # 响应
+        return http.JsonResponse({
+            'code': RETCODE.OK,
+            'errmsg': 'OK'
+        })
+
+class EmailVerifyView(View):
+    def get(self,request):
+        # 接收
+        token = request.GET.get('token')
+        #验证
+        dict1 = meiduo_signature.loadds(token,contants.EMAIL_EXPIRES)
+        if dict1 is None:
+            return http.HttpResponseBadRequest('激活失败，请从新发送邮件')
+        # 接收 请求用户的的id
+        user_id = dict1.get('user_id')
+        #处理
+        try:
+            user = User.objects.get(pk = user_id)
+        except:
+            return http.HttpResponseBadRequest('激活用户无效')
+        else:
+            user.email_active = True
+            user.save()
+        return redirect('/info/')
+
+class AddressView(LoginRequiredMixin, View):
+
+    def get(self, request):
+
+        return render(request, 'user_center_site.html')
+
+
+
+
+
