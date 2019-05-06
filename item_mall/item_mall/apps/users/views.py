@@ -8,7 +8,7 @@ from django.contrib.auth import login,logout
 
 import re
 
-from .models import User
+from .models import User,Address
 
 from item_mall.utils.response_code import RETCODE
 from django.urls import reverse
@@ -19,6 +19,7 @@ from item_mall.utils import meiduo_signature
 from . import contants
 from django.conf import settings
 from celery_tasks.mail.tasks import send_user_email
+from django_redis import get_redis_connection
 
 
 
@@ -237,10 +238,320 @@ class EmailVerifyView(View):
 class AddressView(LoginRequiredMixin, View):
 
     def get(self, request):
+        #接受用户名
+        Login_user = request.user
+        address = Address.objects.filter(user = Login_user,is_delete=False)
+        data_list = []
+        for i in address:
+            data_list.append(i.to_dict())
+            # data_list.append(Address.to_dict(i))
 
-        return render(request, 'user_center_site.html')
+        context = {
+            'addresses':data_list,
+            'user':Login_user
+        }
+
+        return render(request, 'user_center_site.html',context)
+
+#添加类
+class AddressCreateView(LoginRequiredMixin, View):
+    def post(self, request):
+        user = request.user
+        count = Address.objects.filter(user =request.user).count()
+        if count > 20:
+            return http.JsonResponse({'code': RETCODE.THROTTLINGERR, 'errmsg': '超过地址数量上限'})
+
+
+        json_dict = json.loads(request.body.decode())
+
+        receiver = json_dict.get('receiver')
+
+        province_id = json_dict.get('province_id')
+
+        city_id = json_dict.get('city_id')
+
+        district_id = json_dict.get('district_id')
+
+        place = json_dict.get('place')
+
+        mobile = json_dict.get('mobile')
+
+        tel = json_dict.get('tel')
+
+        email = json_dict.get('email')
+        # 验证
+        if not all([receiver, province_id, city_id, district_id, place, mobile]):
+            return http.JsonResponse({
+                'code': RETCODE.PARAMERR,
+                'errmsg': '参数不完整'
+            })
+        # 格式验证
+        if not re.match(r'^1[3-9]\d{9}$', mobile):
+            return http.JsonResponse({
+                'code': RETCODE.PARAMERR,
+                'errmsg': '手机号格式错误'
+            })
+        if tel:
+            if not re.match(r'^(0[0-9]{2,3}-)?([2-9][0-9]{6,7})+(-[0-9]{1,4})?$', tel):
+                return http.JsonResponse({
+                    'code': RETCODE.PARAMERR,
+                    'errmsg': '固定电话格式错误'
+                })
+        if email:
+            if not re.match(r'^[a-z0-9][\w\.\-]*@[a-z0-9\-]+(\.[a-z]{2,5}){1,2}$', email):
+                return http.JsonResponse({
+                    'code': RETCODE.PARAMERR,
+                    'errmsg': '邮箱格式错误'
+                })
+        address = Address.objects.create(
+            user=user,
+            title=receiver,
+            receiver=receiver,
+            province_id=province_id,
+            city_id=city_id,
+            district_id=district_id,
+            detail=place,
+            mobile=mobile,
+            phone=tel,
+            email=email
+        )
+        # 判断当前用户有没有默认地址，没有设置此地址为默认
+        if user.default_address is None:
+            user.default_address = address
+            user.save()
+        return http.JsonResponse({
+            'code':RETCODE.OK,
+            'errmsg':'ok',
+            'address':address.to_dict()
+        })
+
+# class AddressCreateView(LoginRequiredMixin, View):
+#     def post(self, request):
+#
+#         # 添加收货地址
+#
+#         user = request.user
+#
+#         # 接收
+#
+#         '''
+#
+#         request.GET===>查询参数
+#
+#         request.POST===><form method='post'></form>
+#
+#         request.body===>ajax请求中的json数据
+#
+#         '''
+#
+#         dict1 = json.loads(request.body.decode())
+#
+#         # title = dict1.get('title')
+#
+#         receiver = dict1.get('receiver')
+#
+#         province_id = dict1.get('province_id')
+#
+#         city_id = dict1.get('city_id')
+#
+#         district_id = dict1.get('district_id')
+#
+#         place = dict1.get('place')
+#
+#         mobile = dict1.get('mobile')
+#
+#         tel = dict1.get('tel')
+#
+#         email = dict1.get('email')
+#
+#         # 验证
+#         if not all([receiver, province_id, city_id, district_id, place, mobile]):
+#             return http.JsonResponse({
+#                 'code': RETCODE.PARAMERR,
+#                 'errmsg': '参数不完整'
+#             })
+#         # 格式验证
+#         if not re.match(r'^1[3-9]\d{9}$', mobile):
+#             return http.JsonResponse({
+#                 'code': RETCODE.PARAMERR,
+#                 'errmsg': '手机号格式错误'
+#             })
+#         if tel:
+#             if not re.match(r'^(0[0-9]{2,3}-)?([2-9][0-9]{6,7})+(-[0-9]{1,4})?$', tel):
+#                 return http.JsonResponse({
+#                     'code': RETCODE.PARAMERR,
+#                     'errmsg': '固定电话格式错误'
+#                 })
+#         if email:
+#             if not re.match(r'^[a-z0-9][\w\.\-]*@[a-z0-9\-]+(\.[a-z]{2,5}){1,2}$', email):
+#                 return http.JsonResponse({
+#                     'code': RETCODE.PARAMERR,
+#                     'errmsg': '邮箱格式错误'
+#                 })
+#
+#         # 处理：添加，创建对象***.objects.create()
+#         address = Address.objects.create(
+#             user=user,
+#             title=receiver,
+#             receiver=receiver,
+#             province_id=province_id,
+#             city_id=city_id,
+#             district_id=district_id,
+#             detail=place,
+#             mobile=mobile,
+#             phone=tel,
+#             email=email
+#         )
+#         # 判断当前用户是否有默认地址，如果没有则设置为当前地址
+#         if user.default_address is None:
+#             user.default_address = address
+#             user.save()
+#
+#         # 响应
+#         return http.JsonResponse({
+#             'code': RETCODE.OK,
+#             'errmsg': 'ok',
+#             'address': address.to_dict()
+#         })
 
 
 
+#修改类
+class AddressUpdateView(LoginRequiredMixin,View):
+    def put(self, request,address_id):
+        # 接收
+        user = request.user
 
+        json_dict = json.loads(request.body.decode())
+
+        receiver = json_dict.get('receiver')
+
+        province_id = json_dict.get('province_id')
+
+        city_id = json_dict.get('city_id')
+
+        district_id = json_dict.get('district_id')
+
+        place = json_dict.get('place')
+
+        mobile = json_dict.get('mobile')
+
+        tel = json_dict.get('tel')
+
+        email = json_dict.get('email')
+        # 验证
+        if not all([receiver, province_id, city_id, district_id, place, mobile]):
+            return http.JsonResponse({
+                'code': RETCODE.PARAMERR,
+                'errmsg': '参数不完整'
+            })
+        # 格式验证
+        if not re.match(r'^1[3-9]\d{9}$', mobile):
+            return http.JsonResponse({
+                'code': RETCODE.PARAMERR,
+                'errmsg': '手机号格式错误'
+            })
+        if tel:
+            if not re.match(r'^(0[0-9]{2,3}-)?([2-9][0-9]{6,7})+(-[0-9]{1,4})?$', tel):
+                return http.JsonResponse({
+                    'code': RETCODE.PARAMERR,
+                    'errmsg': '固定电话格式错误'
+                })
+        if email:
+            if not re.match(r'^[a-z0-9][\w\.\-]*@[a-z0-9\-]+(\.[a-z]{2,5}){1,2}$', email):
+                return http.JsonResponse({
+                    'code': RETCODE.PARAMERR,
+                    'errmsg': '邮箱格式错误'
+                })
+        try:
+            address = Address.objects.get(PK = address_id,user=user,is_delete=False)
+        except:
+            return http.JsonResponse({
+                'code': RETCODE.PARAMERR,
+                'errmsg': '收货地址编号错误'
+            })
+        address.receiver = receiver
+        address.province_id = province_id
+        address.city_id = city_id
+        address.district_id = district_id
+        address.detail = place
+        address.mobile = mobile
+        address.phone = tel
+        address.email = email
+        address.save()
+        return http.JsonResponse({
+            'code': RETCODE.OK,
+            'errmsg': 'ok',
+            'address': address.to_dict()
+        })
+    def delete(self,request,address_id):
+        # 接收
+        user = request.user
+        try:
+            address = Address.objects.get(pk = address_id,user = user,is_delete=False)
+        except:
+            return http.JsonResponse({
+                'code': RETCODE.PARAMERR,
+                'errmsg': '收货地址编号错误'
+            })
+        address.is_delete = True
+        address.save()
+        return http.JsonResponse({
+            'code': RETCODE.OK,
+            'errmsg': 'ok',
+        })
+class AddressDefaultView(LoginRequiredMixin,View):
+    def put(self,request,address_id):
+        user = request.user
+        user.default_address_id = address_id
+        user.save()
+        return http.JsonResponse({
+            'code': RETCODE.OK,
+            'errmsg': 'ok',
+
+        })
+
+class AddressTitleView(LoginRequiredMixin,View):
+    def put(self,request,address_id):
+        json_dict = json.load(request.body.decode())
+        title = json_dict.get('title')
+        if not all ([title]):
+            return http.JsonResponse({
+                'code':RETCODE.PARAMERR,
+                'errmsg':'标题不能为空'
+
+            })
+        try:
+            address = Address.objects.get(pk = address_id,user = request.user,is_delete=False)
+        except:
+            return http.JsonResponse({
+                'code': RETCODE.PARAMERR,
+                'errmsg': '收货地址编号错误'
+            })
+        address.title = title
+        address.save()
+        return http.JsonResponse({
+            'code': RETCODE.OK,
+            'errmsg': 'ok',
+        })
+class PasswordView(LoginRequiredMixin,View):
+    def get(self,request):
+        return render(request,'user_center_pass.html')
+    def post(self,request):
+        old_pwd = request.POST.get('old_pwd')
+        new_pwd = request.POST.get('new_pwd')
+        new_cpwd = request.POST.get('new_cpwd')
+        user = request.user
+
+        if not all([old_pwd,new_pwd,new_cpwd]):
+            return http.HttpResponseBadRequest('参数不够')
+        if not user.check_password(old_pwd):
+            return http.HttpResponseBadRequest('原密码错误')
+        if not re.match(r'^[0-9A-Za-z]{8,20}$', new_pwd):
+            return http.HttpResponseBadRequest('密码格式不对')
+        if new_pwd != new_cpwd:
+            return http.HttpResponseBadRequest('两次密码不一致')
+        user.set_password(new_pwd)
+        user.save()
+        return render(request, 'user_center_pass.html')
 
