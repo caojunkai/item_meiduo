@@ -257,3 +257,12 @@ EMAIL_HOST_PASSWORD = 'cjk123'  # 邮箱授权时获得的密码，非注册登�
 EMAIL_FROM = 'caojunkai_123@163.com'  # 发件人抬头
 
 EMAIL_VERIFY_URL = 'http://www.meiduo.site:8000/emails/verification/'
+
+# 访问fdfs文件的域名
+
+FDFS_URL = 'http://image.meiduo.site:8888/'
+
+# 指定存储类型
+
+DEFAULT_FILE_STORAGE = 'item_mall.utils.storage.FdfsStorage'
+

@@ -87,12 +87,12 @@ class RegisterView(View):
         response.set_cookie('username',user.username,max_age=60 * 60 * 24 * 14)
         return response
 
-class IndexView(View):
-    """首页广告"""
-
-    def get(self, request):
-        """提供首页广告界面"""
-        return render(request, 'index.html')
+# class IndexView(View):
+#     """首页广告"""
+#
+#     def get(self, request):
+#         """提供首页广告界面"""
+#         return render(request, 'index.html')
 
 class UsernameCountView(View):
     def get(self,request,username):
