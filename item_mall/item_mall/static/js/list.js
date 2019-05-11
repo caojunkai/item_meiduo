@@ -9,6 +9,7 @@ var vm = new Vue({
         carts: [], // 购物车数据,
 		hots: [],
         category_id: category_id,
+
     },
     mounted(){
         // 获取购物车数据
@@ -16,6 +17,7 @@ var vm = new Vue({
 
 		// 获取热销商品数据
         this.get_hot_goods();
+        this.username=getCookie('username');
     },
     methods: {
         // 获取购物车数据

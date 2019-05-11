@@ -14,7 +14,8 @@ var vm = new Vue({
 		    detail: true,
             pack: false,
             comment: false,
-            service: false
+            service: false,
+            username:[],
         },
         comments: [],
         score_classes: {
@@ -42,6 +43,8 @@ var vm = new Vue({
 
 		// 获取商品评价信息
         this.get_goods_comment();
+                this.username=getCookie('username');
+
     },
     watch: {
         // 监听商品数量的变化

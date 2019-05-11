@@ -18,13 +18,15 @@ from django.contrib import admin
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
-url(r'^', include('users.urls', namespace='users')),
     url(r'^', include('users.urls', namespace='users')),
-url(r'^', include('verifications.urls')),
-url('^', include('oauth.urls')),
+    url(r'^', include('users.urls', namespace='users')),
+    url(r'^', include('verifications.urls')),
+    url('^', include('oauth.urls')),
     url('^', include('areas.urls')),
     url('^', include('contents.urls')),
     url('^', include('goods.urls')),
+    url(r'^search/',include('haystack.urls')),
+
 
 
 ]

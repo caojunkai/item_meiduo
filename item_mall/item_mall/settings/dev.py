@@ -46,7 +46,7 @@ INSTALLED_APPS = [
     'areas.apps.AreasConfig',
     'goods.apps.GoodsConfig',
     'contents.apps.ContentsConfig',
-
+    'haystack',  # 全文检索，用于对接es
 ]
 
 MIDDLEWARE = [
@@ -152,7 +152,7 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.11/howto/static-files/
-
+# 指定静态文件加载路径
 STATIC_URL = '/static/'
 # 配置静态文件加载路径
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
@@ -180,6 +180,14 @@ CACHES = {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
     },
+    "history": {  # 浏览记录
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/3",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    },
+
 }
 SESSION_ENGINE = "django.contrib.sessions.backends.cache"
 SESSION_CACHE_ALIAS = "session"
@@ -265,4 +273,19 @@ FDFS_URL = 'http://image.meiduo.site:8888/'
 # 指定存储类型
 
 DEFAULT_FILE_STORAGE = 'item_mall.utils.storage.FdfsStorage'
+
+# 在配置文件中配置Haystack为搜索引擎后端
+# Haystack
+HAYSTACK_CONNECTIONS = {
+    'default': {
+        'ENGINE': 'haystack.backends.elasticsearch_backend.ElasticsearchSearchEngine',
+        'URL': 'http://192.168.160.129:9200/', # Elasticsearch服务器ip地址，端口号固定为9200
+        'INDEX_NAME': 'meiduo_mall', # Elasticsearch建立的索引库的名称
+    },
+}
+
+# 当添加、修改、删除数据时，自动生成索引 HAYSTACK_SIGNAL_PROCESSOR 配置项保证了在Django运行起来后，有新的数据产生时，Haystack仍然可以让Elasticsearch实时生成新数据的索引
+HAYSTACK_SIGNAL_PROCESSOR = 'haystack.signals.RealtimeSignalProcessor'
+
+HAYSTACK_SEARCH_RESULTS_PER_PAGE = 6
 
