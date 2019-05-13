@@ -57,16 +57,12 @@
             <a href="cart.html" class="cart_name fl">我的购物车</a>
             <div class="goods_count fl" id="show_count">2</div>
             <ul class="cart_goods_show">
-                <li>
-                    <img src="images/goods/goods001.jpg" alt="商品图片">
-                    <h4>华为 HUAWEI P10 Plus 6GB+64GB 钻雕金 移动联通电信4G手机 双卡双待</h4>
-                    <div>1</div>
+                 <li v-for="cart in carts">
+                    <img :src="cart.default_image_url" alt="商品图片">
+                    <h4>[[ cart.name ]]</h4>
+                    <div>[[ cart.count ]]</div>
                 </li>
-                <li>
-                    <img src="images/goods/goods002.jpg" alt="商品图片">
-                    <h4>Apple iPhoneX 64GB 深空灰色 移动联通电信4G手机</h4>
-                    <div>1</div>
-                </li>
+
             </ul>
         </div>
     </div>
@@ -153,7 +149,7 @@
 
             <div class="total">总价：<em>{{ sku.price }}元</em></div>
             <div class="operate_btn">
-                <a href="javascript:;" class="add_cart" id="add_cart">加入购物车</a>
+                <a href="javascript:;" class="add_cart" id="add_cart" @click="add_cart">加入购物车</a>
             </div>
         </div>
     </div>

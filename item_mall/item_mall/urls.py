@@ -26,6 +26,8 @@ urlpatterns = [
     url('^', include('contents.urls')),
     url('^', include('goods.urls')),
     url(r'^search/',include('haystack.urls')),
+    url(r'^',include('carts.urls')),
+    url(r'^',include('orders.urls')),
 
 
 

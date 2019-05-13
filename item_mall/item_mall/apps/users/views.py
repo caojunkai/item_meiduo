@@ -20,7 +20,7 @@ from . import contants
 from django.conf import settings
 from celery_tasks.mail.tasks import send_user_email
 from django_redis import get_redis_connection
-
+from carts.utils import merge_cart_cookie_to_redis
 
 
 # Create your views here.
@@ -84,6 +84,7 @@ class RegisterView(View):
         url = reverse('users:index')
         # 响应注册结果
         response =  redirect(url)
+        response = merge_cart_cookie_to_redis(request,response)
         response.set_cookie('username',user.username,max_age=60 * 60 * 24 * 14)
         return response
 

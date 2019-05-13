@@ -14,6 +14,7 @@ from item_mall.utils import meiduo_signature
 from . import contants
 from users.models import User
 from django.contrib.auth import login
+from carts.utils import merge_cart_cookie_to_redis
 
 
 
@@ -116,6 +117,7 @@ class QQopenidView(View):
         OAuthQQUser.objects.create(user = user,openid = openid)
         login(request,user)
         response = redirect(next_url)
+        response = merge_cart_cookie_to_redis(request,response)
         response.set_cookie('username', user.username, max_age=60 * 60 * 24 * 14)
         return response
 

@@ -47,6 +47,8 @@ INSTALLED_APPS = [
     'goods.apps.GoodsConfig',
     'contents.apps.ContentsConfig',
     'haystack',  # 全文检索，用于对接es
+    'carts.apps.CartsConfig',
+    'orders.apps.OrdersConfig',
 ]
 
 MIDDLEWARE = [
@@ -187,6 +189,13 @@ CACHES = {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
     },
+"carts": {
+    "BACKEND": "django_redis.cache.RedisCache",
+    "LOCATION": "redis://127.0.0.1:6379/4",
+    "OPTIONS": {
+        "CLIENT_CLASS": "django_redis.client.DefaultClient",
+    }
+},
 
 }
 SESSION_ENGINE = "django.contrib.sessions.backends.cache"
