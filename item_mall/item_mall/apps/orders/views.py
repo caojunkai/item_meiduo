@@ -7,8 +7,12 @@ from goods.models import SKU
 import json
 from django import http
 from item_mall.utils.response_code import RETCODE
-import datetime
+from _datetime import datetime
 from .models import OrderInfo,OrderGoods
+from django.db import transaction
+from django.core.paginator import Paginator
+
+
 # Create your views here.
 
 
@@ -29,6 +33,7 @@ class SettlementView(LoginRequiredMixin,View):
         #set
         selected_list = redis_cli.smembers('selected%d'%user.id)
         selected_list = [int(sku_id)for sku_id in selected_list]
+
         # 查询库存商品
         skus = SKU.objects.filter(pk__in = selected_list,is_launched=True)
         # 转格式
@@ -99,43 +104,119 @@ class OrderCommitView(LoginRequiredMixin,View):
         cart_dict = {int(sku_id):int(count) for sku_id,count in cart_dict.items()}
         selected_list = redis_cli.smembers('selected%d'%user.id)
         selected_list = [int(sku_id)for sku_id in selected_list]
-        #创建订单对象
-        now = datetime.now()
-        tatal_count = 0 #数量
-        tatal_amount = 0 #单价
-        if pay_method ==1:  #货到付款
-            status = 2
-        else:
-            status = 1
-        order_id = '%s%09d'%(now.strftime('%Y%m%d%H%M%S'),user.id)
-        order = OrderInfo.objects.create(
-            order_id=order_id,
-            user_id=user.id,
-            address_id=address_id,
-            total_count=tatal_count,
-            total_amount=tatal_amount,
-            freight=10,
-            pay_method=pay_method,
-            status=status
-        )
-        # 查询库存商品，遍历
-        skus = SKU.objects.filter(pk__in = selected_list,is_launched=True)
-        for sku in skus:
-            count = cart_dict[sku.id]
-            # 3.1判断库存是否足够，如果不足则返回提示，如果库存足够，则继续
-            if sku.stock < count:
-                return http.JsonResponse({'code': RETCODE.STOCKERR, 'errmsg': '库存不足'})
-            # 修改商品库存，销量
-            sku.stock -=count
-            sku.sales+=count
-            sku.save()
-            # 创建订单商品
-            order_goods = OrderGoods.objects.create(
+
+        # 讲一下代码加入事务
+        with transaction.atomic():
+            #开启事务
+            sid = transaction.savepoint()
+            #创建订单对象
+            now = datetime.now()
+            tatal_count = 0 #数量
+            tatal_amount = 0 #单价
+            if pay_method ==1:  #货到付款
+                status = 2
+            else:
+                status = 1
+            order_id = '%s%09d'%(now.strftime('%Y%m%d%H%M%S'),user.id)
+            order = OrderInfo.objects.create(
                 order_id=order_id,
-                sku_id=sku.id,
-                count=count,
-                price=sku.price
+                user_id=user.id,
+                address_id=address_id,
+                total_count=tatal_count,
+                total_amount=tatal_amount,
+                freight=10,
+                pay_method=pay_method,
+                status=status
             )
+            # 查询库存商品，遍历
+            skus = SKU.objects.filter(pk__in = selected_list,is_launched=True)
+            for sku in skus:
+                count = int(cart_dict[sku.id])
+                # 3.1判断库存是否足够，如果不足则返回提示，如果库存足够，则继续
+                if sku.stock < count:
+
+                    #回滚事务
+                    transaction.savepoint_rollback(sid)
+
+                    return http.JsonResponse({'code': RETCODE.STOCKERR, 'errmsg': '库存不足'})
+                # 修改商品库存，销量
+                sku.stock -=count
+                sku.sales += count
+                sku.save()
+                # 创建订单商品
+                order_goods = OrderGoods.objects.create(
+                    order_id=order_id,
+                    sku_id=sku.id,
+                    count=count,
+                    price=sku.price
+                )
+                #计算商品总价
+                tatal_count = count
+                tatal_amount +=count*sku.price
+            #将查询后的总价数量修改后提交
+            order.total_count = tatal_count
+            order.total_amount = tatal_amount
+            order.save()
+
+            #提交事务
+            transaction.savepoint_commit(sid)
+        #订单生成后删除购物车中选中的商品
+        redis_cli.hdel('cart%d'%user.id,*selected_list)
+        redis_cli.delete('selected%d'%user.id)
+        return http.JsonResponse({
+            'code':RETCODE.OK,
+            'errmsg':'ok',
+            'order_id':order_id
+        })
+
+class SuccessView(LoginRequiredMixin,View):
+    def get(self,request):
+        param_dict = request.GET
+        order_id = param_dict.get('order_id')
+        pay_amount = param_dict.get('payment_amount')
+        pay_method = param_dict.get('pay_method')
+        context = {
+            'order_id':order_id,
+            'payment_amount':pay_amount,
+            'pay_method':pay_method,
+        }
+        return render(request,'pay_success.html',context)
+
+class OrderListView(LoginRequiredMixin,View):
+    def get(self,request,page_num):
+        # 查询当前用户所有订单
+        order_list = OrderInfo.objects.filter(user_id=request.user.id).order_by('status')
+        #分页
+        paginator = Paginator(order_list,3)
+        page = paginator.page(page_num)
+        #转化为前端需要格式
+        page_list = []
+        for order in page:
+            detail_list = []
+            for detail in order.skus.all():
+                detail_list.append({
+                    'default_image_url':detail.sku.default_image.url,
+                    'name':detail.sku.name,
+                    'price':detail.price,
+                    'count':detail.count,
+                    'total':detail.price *detail.count
+                })
+            page_list.append({
+                'create_time':order.create_time,
+                'order_id':order.order_id,
+                'detail_list':detail_list,
+                'total_amount':order.total_amount,
+                'freight':order.freight,
+                'status':order.status,
+            })
+
+        context = {
+            'page': page_list,
+            'page_num': page_num,
+            'page_total': paginator.num_pages
+        }
+        return render(request,'user_center_order.html',context)
+
 
 
 
