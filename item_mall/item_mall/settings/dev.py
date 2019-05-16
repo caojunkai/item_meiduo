@@ -49,6 +49,8 @@ INSTALLED_APPS = [
     'haystack',  # 全文检索，用于对接es
     'carts.apps.CartsConfig',
     'orders.apps.OrdersConfig',
+    'payments.apps.PaymentsConfig',
+    'django_crontab',#定时任务
 ]
 
 MIDDLEWARE = [
@@ -297,4 +299,17 @@ HAYSTACK_CONNECTIONS = {
 HAYSTACK_SIGNAL_PROCESSOR = 'haystack.signals.RealtimeSignalProcessor'
 
 HAYSTACK_SEARCH_RESULTS_PER_PAGE = 6
+
+ALIPAY_APPID = 2016093000635016
+ALIPAY_DEBUG = True
+ALIPAY_URL = 	'https://openapi.alipaydev.com/gateway.do'
+ALIPAY_RETURN_URL = 'http://www.meiduo.site:8000/payment/status/'
+
+# 在定时任务中，如果出现非英文字符，会出现字符异常错误
+CRONTAB_COMMAND_PREFIX = 'LANG_ALL=zh_cn.UTF-8'
+
+CRONJOBS = [
+    # 每1分钟生成一次首页静态文件
+    ('*/1 * * * *', 'contents.crons.generate_static_index_html', '>> ' + os.path.join(os.path.dirname(BASE_DIR), 'logs/crontab.log'))
+]
 

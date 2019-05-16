@@ -6,6 +6,8 @@ urlpatterns = [
     url(r'^orders/commit/$', views.OrderCommitView.as_view()),
     url(r'^orders/success/$',views.SuccessView.as_view()),
     url('^orders/info/(?P<page_num>\d+)/$', views.OrderListView.as_view()),
+    url(r'^orders/comment/$',views.CommentView.as_view()),
+    url('^comment/(?P<sku_id>\d+)/$', views.CommentListView.as_view()),
 
 
 ]

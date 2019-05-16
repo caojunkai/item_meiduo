@@ -4,6 +4,7 @@ var vm = new Vue({
     delimiters: ['[[', ']]'],
     data: {
         host: host,
+        page_num:''
     },
     mounted(){
 

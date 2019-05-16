@@ -86,7 +86,7 @@
                         <td width="15%">{{ order.total_amount }}元<br>运费：{{ order.freight }}元</td>
                         {% if order.status == 1 %}
                             <td width="15%">待付款</td>
-                            <td width="15%"><a href="javascript:;" class="oper_btn">去付款</a></td>
+                            <td width="15%"><a href="javascript:;" class="oper_btn" @click="oper_btn_click('{{ order.order_id }}','1')">去付款</a></td>
                         {% elif order.status == 2 %}
                             <td width="15%">待发货</td>
                             <td width="15%">&nbsp;</td>
@@ -95,7 +95,7 @@
                             <td width="15%"><a href="javascript:;" class="oper_btn">确认收货</a></td>
                         {% elif order.status == 4 %}
                             <td width="15%">待评价</td>
-                            <td width="15%"><a href="javascript:;" class="oper_btn">去评价</a></td>
+                            <td width="15%"><a href="javascript:;" class="oper_btn" @click="oper_btn_click('{{ order.order_id }}','4')">去评价</a></td>
                         {% elif order.status == 5 %}
                             <td width="15%">已完成</td>
                             <td width="15%">&nbsp;</td>
@@ -108,9 +108,9 @@
                 </table>
             {% endfor %}
 
-		    <div class="pagenation">
-		        <div id="pagination" class="page"></div>
-    		</div>
+		     <div class="pagenation">
+                <div id="pagination" class="page"></div>
+            </div>
 
 		</div>
 	</div>

@@ -13,6 +13,7 @@ from django.db import transaction
 from django.core.paginator import Paginator
 
 
+
 # Create your views here.
 
 
@@ -180,14 +181,14 @@ class SuccessView(LoginRequiredMixin,View):
             'payment_amount':pay_amount,
             'pay_method':pay_method,
         }
-        return render(request,'pay_success.html',context)
+        return render(request,'order_success.html',context)
 
 class OrderListView(LoginRequiredMixin,View):
     def get(self,request,page_num):
         # 查询当前用户所有订单
         order_list = OrderInfo.objects.filter(user_id=request.user.id).order_by('status')
         #分页
-        paginator = Paginator(order_list,3)
+        paginator = Paginator(order_list,5)
         page = paginator.page(page_num)
         #转化为前端需要格式
         page_list = []
@@ -216,6 +217,100 @@ class OrderListView(LoginRequiredMixin,View):
             'page_total': paginator.num_pages
         }
         return render(request,'user_center_order.html',context)
+class CommentView(View):
+    def get(self,request):
+        try:
+            order_id = request.GET.get('order_id')
+        except:
+            return render(request,'404.html')
+        try:
+            order = OrderInfo.objects.get(pk = order_id)
+        except:
+            return render(request,'404.html')
+        #处理：查询订单中的商品
+        skus =order.skus.filter(is_commented = False)
+        sku_list = []
+        for detail in skus:
+            sku_list.append({
+                'order_id':order_id,
+                'sku_id':detail.sku.id,
+                'default_image_url':detail.sku.default_image.url,
+                'name':detail.sku.name,
+                'price':str(detail.price)
+            })
+        #响应
+        context = {'skus':sku_list}
+        return render(request,'goods_judge.html',context)
+
+    def post(self,request):
+        #保存评论
+        #接收
+        param_dict = json.loads(request.body.decode())
+        order_id = param_dict.get('order_id')
+        sku_id = param_dict.get('sku_id')
+        comment = param_dict.get('comment')
+        score = param_dict.get('score')
+        is_anonymous = param_dict.get('is_anonymous',False)
+        #验证
+        if not all([order_id,sku_id,comment,score]):
+            return http.JsonResponse({
+                'code':RETCODE.PARAMERR,
+                'errmsg':'参数不完整'
+            })
+        #订单商品是否还在
+        try:
+            order_goods = OrderGoods.objects.get(order_id = order_id,sku_id=sku_id)
+        except:
+            return http.JsonResponse({
+                'code':RETCODE.PARAMERR,
+                'errmsg':'订单不存在'
+            })
+#处理
+        #1保存订单商品的评论信息
+        order_goods.comment = comment
+        order_goods.score = score
+        order_goods.is_anonymous = is_anonymous
+        order_goods.is_commented = True
+        order_goods.save()
+        #2 修改订单状态
+        #一个订单有多个商品，全部评论后修改订单状态
+        order = order_goods.order
+        if order.skus.filter(is_commented  =False).count() <=0:
+            order.status = 5
+            order.save()
+
+        #响应
+        return http.JsonResponse({'code':RETCODE.OK,'errmsg':'ok'})
+
+class CommentListView(View):
+    def get(self,request,sku_id):
+        comments = OrderGoods.objects.filter(sku =sku_id,is_commented=True).order_by('-create_time')
+        comment_list = []
+        for comment in comments:
+            comment_list.append({
+                'username':'****' if comment.is_anonymous == True else comment.order.user.username,
+                'score':comment.score,
+                'comment':comment.comment
+            })
+        return http.JsonResponse({
+            'code': RETCODE.OK,
+
+            'errmsg': '',
+
+            'goods_comment_list': comment_list
+
+        })
+
+
+
+
+
+
+
+
+
+
+
 
 
 
