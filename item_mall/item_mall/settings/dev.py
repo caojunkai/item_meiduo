@@ -108,7 +108,7 @@ WSGI_APPLICATION = 'item_mall.wsgi.application'
 # https://docs.djangoproject.com/en/1.11/ref/settings/#databases
 
 DATABASES = {
-    'default': {
+    'default': {    #主 负责写
         'ENGINE': 'django.db.backends.mysql', # 数据库引擎
         'HOST': '127.0.0.1', # 数据库主机
         'PORT': 3306, # 数据库端口
@@ -116,9 +116,22 @@ DATABASES = {
         'PASSWORD': '123456', # 数据库用户密码
         'NAME': 'meiduo_mall' # 数据库名字
     },
-
+    'slave': { # 读（从机）
+            'ENGINE': 'django.db.backends.mysql',
+            'HOST': '127.0.0.1',
+            'PORT': 8306,
+            'USER': 'root',
+            'PASSWORD': 'mysql',
+            'NAME': 'meiduo_mall'
+        }
 
 }
+
+
+# 配置数据库读写路由
+DATABASE_ROUTERS = ['item_mall.utils.db_router.MasterSlaveDBRouter']
+
+
 
 
 # Password validation
@@ -313,3 +326,7 @@ CRONJOBS = [
     ('*/1 * * * *', 'contents.crons.generate_static_index_html', '>> ' + os.path.join(os.path.dirname(BASE_DIR), 'logs/crontab.log'))
 ]
 
+
+# Nginx部署静态数据
+# 配置收集静态文件存放的目录
+STATIC_ROOT = os.path.join(os.path.dirname(BASE_DIR), 'static')
